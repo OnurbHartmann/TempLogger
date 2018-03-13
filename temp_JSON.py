@@ -136,7 +136,7 @@ def getUptime():
 	#print(uptime_string)
 	return uptime_minutes
 
-connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=UxExItrEFbnszDEJHtZBI/RO2mVcMb5z0R2nioz6QsQ='
+connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=xxx'
 #deviceId = 'raspi0000000032bf4fc5'
 #myserial = getserial()
 
