@@ -59,7 +59,7 @@ class D2CMsgSender:
         return r.status_code
     
 if __name__ == '__main__':
-    connectionString = 'HostName=RaspiBruno.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=KX8D/60ED9lEdWSJpzMy7Mua6k/RPqNMfJD9vt47xYI='
+    connectionString = 'HostName=RaspiBruno.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=ccc'
     d2cMsgSender = D2CMsgSender(connectionString)
     deviceId = 'raspi1000000032bf4fc5'
     message = 'Hello, IoT Hub'

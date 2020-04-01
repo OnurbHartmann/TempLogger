@@ -76,10 +76,10 @@ class DeviceManager:
         return r.text, r.status_code
         
 if __name__ == '__main__':
-    connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=UxExItrEFbnszDEJHtZBI/RO2mVcMb5z0R2nioz6QsQ='
+    connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=xxx'
     dm = DeviceManager(connectionString)
     deviceId = 'raspi2000000032bf4fc5'
     print dm.createDeviceId(deviceId)
     print dm.retrieveDeviceId(deviceId)
     print dm.listDeviceIds()
-    """ connectionString = 'HostName=RaspiBruno.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=KX8D/60ED9lEdWSJpzMy7Mua6k/RPqNMfJD9vt47xYI=' """
+    
