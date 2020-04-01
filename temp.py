@@ -143,10 +143,10 @@ def getUptime():
 
 connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=xxx'
 #deviceId = 'raspi0000000032bf4fc5'
-#myserial = getserial()
+myserial = getserial()
 
-device_list =['raspi0000000032bf4fc5','raspi1000000032bf4fc5','raspi2000000032bf4fc5']
-
+#device_list =[myserial,'raspi0000000032bf4fc5','raspi1000000032bf4fc5','raspi2000000032bf4fc5']
+device_list =[myserial]
 # Iterate over the devicelist
 
 for deviceId in device_list:
