@@ -1,5 +1,4 @@
 #!/usr/bin/python3<<<<<<< HEAD
-
 import time
 import datetime
 import os
@@ -16,9 +15,9 @@ from datetime import timedelta
 from pathlib import Path
 
 """
-Module Name:  d2cMsgSender.py
-Project:      IoTHubRestSample
-Copyright (c) Microsoft Corporation.
+Module Name:  temp.py
+Project:      ReadSensingData
+Copyright (c) Bruno Hartmann
 
 Using [Send device-to-cloud message](https://msdn.microsoft.com/en-US/library/azure/mt590784.aspx) API to send device-to-cloud message from the simulated device application to IoT Hub.
 
