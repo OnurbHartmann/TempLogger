@@ -1,5 +1,5 @@
-<<<<<<< HEAD
-=======
+#!/usr/bin/python3<<<<<<< HEAD
+
 import time
 import datetime
 import os
@@ -7,12 +7,14 @@ import base64
 import hmac
 import hashlib
 import requests
-import urllib2
-import urllib
+#import urllib2
+import urllib.request
 from json import JSONEncoder
 from json import JSONDecoder
 import json
 from datetime import timedelta
+from pathlib import Path
+
 """
 Module Name:  d2cMsgSender.py
 Project:      IoTHubRestSample
@@ -110,7 +112,7 @@ def getSensorTemp(SensorID):
 	else:
 		temperature = float('0')
 		
-	print 'SensorID {} : Temp {}.'.format(SensorID, temperature)
+	print('SensorID {} : Temp {}.'.format(SensorID, temperature))
 	# Temperatur ausgeben
 	rueckgabewert = '%6.2f' % temperature 
 	return(rueckgabewert)
@@ -119,11 +121,12 @@ def getSensorTemp(SensorID):
 #ISS Position lesen wird fuer die Positon des Raspi ---
 #--------------------------------------------------
 def getISSPosition():
-	req = urllib2.Request("http://api.open-notify.org/iss-now.json")
-	response = urllib2.urlopen(req)
-	obj = json.loads(response.read())
+	req = urllib.request.urlopen("http://api.open-notify.org/iss-now.json")
+	response = req.read()
+	print(response)
+	obj = json.loads(response)
 	#print obj['timestamp']
-	print 'ISS Position' + obj['iss_position']['longitude'], obj['iss_position']['latitude']
+	print ('ISS Position' + obj['iss_position']['longitude'], obj['iss_position']['latitude'])
 	return obj
 	# Example prints:
 	#   1364795862
@@ -134,7 +137,7 @@ def getUptime():
 	with open('/proc/uptime', 'r') as f:
 		uptime_minutes = float(f.readline().split()[0])//60
 		#uptime_string = str(timedelta(seconds = uptime_seconds))
-	print str(uptime_minutes)
+	print(str(uptime_minutes))
 	#print(uptime_string)
 	return uptime_minutes
 
@@ -147,7 +150,7 @@ device_list =['raspi0000000032bf4fc5','raspi1000000032bf4fc5','raspi2000000032bf
 # Iterate over the devicelist
 
 for deviceId in device_list:
-	print deviceId
+	print (deviceId)
 	#ASA - DataeTime  - String values conforming to any of ISO 8601 formats are also supported.
 	#timestamp = time.strftime("%Y-%m-%d-%H-%M-%S")
 	#utc_datetime = datetime.datetime.utcnow().isoformat()
@@ -171,7 +174,7 @@ for deviceId in device_list:
 	  "OperatingMinutes": str(getUptime())
 	})
 
-	print jsonString
+	print(jsonString)
 	bytes = jsonString.encode('utf-8', 'replace') 
 
 	
@@ -179,33 +182,35 @@ for deviceId in device_list:
 
 	#message = timestamp  + "," + myserial  + "," + str(getCpuTemperature()) 
 	# print message
-	d2cMsgSender = D2CMsgSender(connectionString)
-	rc = d2cMsgSender.sendD2CMsg(deviceId, bytes)
-
+	#d2cMsgSender = D2CMsgSender(connectionString)
+	#rc = d2cMsgSender.sendD2CMsg(deviceId, bytes)
+	rc=200
 	# Wenn nicht erfolgreich gesendet dann in den SendCache eine Datei schreiben
 	if rc != 204:
-		filename1 = datetime.datetime.now().strftime("%Y%m%d-%H%M%S") 
+		filename1 = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%fZ") 
+		Path("./sendcache/").mkdir(parents=True, exist_ok=True)
 		f = open('./sendcache/' + filename1, 'w')
 		json.dump(jsonString, f)
 		f.close
-		print 'filename=' + filename1
-	print 'rc=' + str(rc)
+		print('filename=' + filename1)
+	print ('rc=' + str(rc))
 	# Wenn  erfolgreich jetzte max 30 aus dem sendcache senden
 
 if rc == 204:
 	number = 0
-	for filename1 in os.listdir('./sendcache'):
+	Path("./sendcache/").mkdir(parents=True, exist_ok=True)
+	for filename1 in os.listdir('./sendcache/'):
 		if number == 30:
 			break
 		number +=1
-		print filename1
+		print (filename1)
 		f = open('./sendcache/' + filename1, 'r')
 		x = json.load(f)
-		print x
+		print (x)
 		bytes = x.encode('utf-8', 'replace') 
 		d2cMsgSender = D2CMsgSender(connectionString)
 		rc = d2cMsgSender.sendD2CMsg(deviceId, bytes)
-		print rc
+		print (rc)
 		#wenn rc nun erfolgreich dann datei loeschen
 		if rc == 204:
 			os.remove('./sendcache/' + filename1)
@@ -220,4 +225,4 @@ if rc == 204:
 	#d2cMsgSender = D2CMsgSender(connectionString)
 	#print d2cMsgSender.sendD2CMsg(deviceId, str(getCpuTemperature()))
 	#time.sleep(1)
->>>>>>> aa9975eed074443a5b8b73b4602715e65d6f29cd
+
