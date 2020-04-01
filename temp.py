@@ -17,7 +17,7 @@ from pathlib import Path
 """
 Module Name:  temp.py
 Project:      TempLogger
-Copyright (c) Bruno Hartmann
+Copyright (c) Bruno Hartmann and others
 
 Using [Send device-to-cloud message](https://msdn.microsoft.com/en-US/library/azure/mt590784.aspx) API to send device-to-cloud message from the simulated device application to IoT Hub.
 
