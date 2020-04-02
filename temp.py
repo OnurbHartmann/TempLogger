@@ -17,58 +17,9 @@ import configparser
 import asyncio
 from azure.iot.device import IoTHubDeviceClient, Message
 import uuid
+import time
 
 
-
-"""
-Module Name:  temp.py
-Project:      TempLogger
-Copyright (c) Bruno Hartmann
-
-Using [Send device-to-cloud message](https://msdn.microsoft.com/en-US/library/azure/mt590784.aspx) API to send device-to-cloud message from the simulated device application to IoT Hub.
-
-This source is subject to the Microsoft Public License.
-See http://www.microsoft.com/en-us/openness/licenses.aspx#MPL
-All other rights reserved.
-
-THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
-"""
-class D2CMsgSender:
-    
-    API_VERSION = '2016-02-03'
-    TOKEN_VALID_SECS = 10
-    TOKEN_FORMAT = 'SharedAccessSignature sig=%s&se=%s&skn=%s&sr=%s'
-    
-    def __init__(self, connectionString=None):
-        if connectionString != None:
-            iotHost, keyName, keyValue = [sub[sub.index('=') + 1:] for sub in connectionString.split(";")]
-            self.iotHost = iotHost
-            self.keyName = keyName
-            self.keyValue = keyValue
-            
-    def _buildExpiryOn(self):
-        return '%d' % (time.time() + self.TOKEN_VALID_SECS)
-    
-    def _buildIoTHubSasToken(self, deviceId):
-        resourceUri = '%s/devices/%s' % (self.iotHost, deviceId)
-        targetUri = resourceUri.lower()
-        expiryTime = self._buildExpiryOn()
-        toSign = '%s\n%s' % (targetUri, expiryTime)
-        key = base64.b64decode(self.keyValue.encode('utf-8'))
-        signature = urllib.quote(
-            base64.b64encode(
-                hmac.HMAC(key, toSign.encode('utf-8'), hashlib.sha256).digest()
-            )
-        ).replace('/', '%2F')
-        return self.TOKEN_FORMAT % (signature, expiryTime, self.keyName, targetUri)
-    
-    def sendD2CMsg(self, deviceId, message):
-        sasToken = self._buildIoTHubSasToken(deviceId)
-        url = 'https://%s/devices/%s/messages/events?api-version=%s' % (self.iotHost, deviceId, self.API_VERSION)
-        r = requests.post(url, headers={'Authorization': sasToken}, data=message)
-        return r.status_code
 
 # ------------------------------------------------------------------
 # Read CPU Temperature
@@ -181,67 +132,72 @@ def processsendcache(devceclient):
 #-------------------------------------
 # Main Programm  
 #-------------------------------------
+def main():
+	while (1==1): 
+		# Read the config
 
-# Read the config
-
-config = configparser.ConfigParser()
-try:
-	config.read('TempLogger.config')
-except:
-  print("An exception occurred on reading configuration!")
-  sys.exit()
-
-
-myserial = getserial()
-deviceId = 'raspi' + myserial
+		config = configparser.ConfigParser()
+		try:
+			config.read('TempLogger.config')
+		except:
+			print("An exception occurred on reading configuration!")
+			sys.exit()
 
 
-IoTHubDeviceConnectionString = 'HostName=' + config['AzIoTHub']['HostName'] + ';DeviceId=' + deviceId + ';SharedAccessKey=' + config['AzIoTHubDevice']['SharedAccessKey']
-
-print (deviceId)
-#ASA - DataeTime  - String values conforming to any of ISO 8601 formats are also supported.
-#timestamp = time.strftime("%Y-%m-%d-%H-%M-%S")
-#utc_datetime = datetime.datetime.utcnow().isoformat()
-timestamp = datetime.datetime.utcnow().isoformat()
-#.strftime("%Y-%m-%d %H:%M:%S") 
-#filename = "".join(["temperaturedata", timestamp, ".log"])
-
-obj = getISSPosition() 
-
-jsonString = JSONEncoder().encode({
-	"DeviceID": deviceId, 
-	"TimestampUTC": timestamp,
-	"longitude": obj['iss_position']['longitude'],
-	"latitude": obj['iss_position']['latitude'],
-	"CpuTemperature": str(getCpuTemperature()),
-	"S1Temperature": str(getSensorTemp('28-041643c28fff')),
-	"S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
-	"S3Temperature": str(getSensorTemp('28-0316440316ff')),
-	"S4Temperature": str(getSensorTemp('28-031644338cff')),
-	"S5Temperature": str(getSensorTemp('28-0316443b9eff')),
-	"OperatingMinutes": str(getUptime())
-})
+		myserial = getserial()
+		deviceId = 'raspi' + myserial
 
 
-# The client object is used to interact with your Azure IoT hub.
-print(IoTHubDeviceConnectionString)
-device_client = IoTHubDeviceClient.create_from_connection_string(IoTHubDeviceConnectionString)
+		IoTHubDeviceConnectionString = 'HostName=' + config['AzIoTHub']['HostName'] + ';DeviceId=' + deviceId + ';SharedAccessKey=' + config['AzIoTHubDevice']['SharedAccessKey']
 
-try:
-	# Connect the client.
-	device_client.connect()
-	msg = Message(jsonString)
-	msg.message_id = uuid.uuid4()
-	msg.correlation_id = "correlation-1234"
-	#msg.custom_properties["tornado-warning"] = "yes"
-	device_client.send_message(msg)
-except:
-	print("An exception occurred on processing to sendcache! (" + filename1 +")")
-	writetosendcache(jsonString)
-finally:
-	# finally, disconnect
-	device_client.disconnect()
+		print (deviceId)
 
+		timestamp = datetime.datetime.utcnow().isoformat()
+
+
+		obj = getISSPosition() 
+
+		jsonString = JSONEncoder().encode({
+			"DeviceID": deviceId, 
+			"TimestampUTC": timestamp,
+			"longitude": obj['iss_position']['longitude'],
+			"latitude": obj['iss_position']['latitude'],
+			"cpuTemperature": str(getCpuTemperature()),
+			"S1Temperature": str(getSensorTemp('28-041643c28fff')),
+			"S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
+			"S3Temperature": str(getSensorTemp('28-0316440316ff')),
+			"S4Temperature": str(getSensorTemp('28-031644338cff')),
+			"S5Temperature": str(getSensorTemp('28-0316443b9eff')),
+			"OperatingMinutes": str(getUptime())
+		})
+
+
+		# The client object is used to interact with your Azure IoT hub.
+		print(IoTHubDeviceConnectionString)
+		device_client = IoTHubDeviceClient.create_from_connection_string(IoTHubDeviceConnectionString)
+
+		try:
+			# Connect the client.
+			device_client.connect()
+			msg = Message(jsonString)
+			msg.message_id = uuid.uuid4()
+			msg.correlation_id = "correlation-1234"
+			#msg.custom_properties["tornado-warning"] = "yes"
+			device_client.send_message(msg)
+		except Exception as inst:
+			print("An exception occurred on sending message. (" + inst + ")")
+			writetosendcache(jsonString)
+		finally:
+			# finally, disconnect
+			try:
+				device_client.disconnect()
+			except Exception as e:
+				print("An exception occurred disconnet device client. (" + e + ")")
+
+
+		time.sleep(5)
+
+main()
 
 
 
