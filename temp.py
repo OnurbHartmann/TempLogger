@@ -13,6 +13,12 @@ from json import JSONDecoder
 import json
 from datetime import timedelta
 from pathlib import Path
+import configparser
+import asyncio
+from azure.iot.device import IoTHubDeviceClient, Message
+import uuid
+
+
 
 """
 Module Name:  temp.py
@@ -140,88 +146,104 @@ def getUptime():
 	#print(uptime_string)
 	return uptime_minutes
 
-connectionString = 'HostName=raspiiothub.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=xxx'
-#deviceId = 'raspi0000000032bf4fc5'
-myserial = getserial()
-
-#device_list =[myserial,'raspi0000000032bf4fc5','raspi1000000032bf4fc5','raspi2000000032bf4fc5']
-device_list =[myserial]
-# Iterate over the devicelist
-
-for deviceId in device_list:
-	print (deviceId)
-	#ASA - DataeTime  - String values conforming to any of ISO 8601 formats are also supported.
-	#timestamp = time.strftime("%Y-%m-%d-%H-%M-%S")
-	#utc_datetime = datetime.datetime.utcnow().isoformat()
-	timestamp = datetime.datetime.utcnow().isoformat()
-	#.strftime("%Y-%m-%d %H:%M:%S") 
-	#filename = "".join(["temperaturedata", timestamp, ".log"])
-
-	obj = getISSPosition() 
-
-	jsonString = JSONEncoder().encode({
-	  "DeviceID": deviceId, 
-	  "TimestampUTC": timestamp,
-	  "longitude": obj['iss_position']['longitude'],
-	  "latitude": obj['iss_position']['latitude'],
-	  "CpuTemperature": str(getCpuTemperature()),
-	  "S1Temperature": str(getSensorTemp('28-041643c28fff')),
-	  "S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
-	  "S3Temperature": str(getSensorTemp('28-0316440316ff')),
-	  "S4Temperature": str(getSensorTemp('28-031644338cff')),
-	  "S5Temperature": str(getSensorTemp('28-0316443b9eff')),
-	  "OperatingMinutes": str(getUptime())
-	})
-
-	print(jsonString)
-	bytes = jsonString.encode('utf-8', 'replace') 
-
-	
-	#datafile = open(filename, "w", 1)
-
-	#message = timestamp  + "," + myserial  + "," + str(getCpuTemperature()) 
-	# print message
-	#d2cMsgSender = D2CMsgSender(connectionString)
-	#rc = d2cMsgSender.sendD2CMsg(deviceId, bytes)
-	rc=200
-	# Wenn nicht erfolgreich gesendet dann in den SendCache eine Datei schreiben
-	if rc != 204:
+def writetosendcache(mssg):
+	try:
 		filename1 = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%fZ") 
 		Path("./sendcache/").mkdir(parents=True, exist_ok=True)
 		f = open('./sendcache/' + filename1, 'w')
-		json.dump(jsonString, f)
+		json.dump(mssg, f)
 		f.close
-		print('filename=' + filename1)
-	print ('rc=' + str(rc))
-	# Wenn  erfolgreich jetzte max 30 aus dem sendcache senden
+	except:
+		  print("An exception occurred on writing to sendcache!")
 
-if rc == 204:
-	number = 0
-	Path("./sendcache/").mkdir(parents=True, exist_ok=True)
-	for filename1 in os.listdir('./sendcache/'):
-		if number == 30:
-			break
-		number +=1
-		print (filename1)
-		f = open('./sendcache/' + filename1, 'r')
-		x = json.load(f)
-		print (x)
-		bytes = x.encode('utf-8', 'replace') 
-		d2cMsgSender = D2CMsgSender(connectionString)
-		rc = d2cMsgSender.sendD2CMsg(deviceId, bytes)
-		print (rc)
-		#wenn rc nun erfolgreich dann datei loeschen
-		if rc == 204:
+def processsendcache(devceclient):
+	try:
+		number = 0
+		Path("./sendcache/").mkdir(parents=True, exist_ok=True)
+		for filename1 in os.listdir('./sendcache/'):
+			if number == 30:
+				break
+			number +=1
+			print (filename1)
+			f = open('./sendcache/' + filename1, 'r')
+			x = json.load(f)
+			print (x)
+			bytes = x.encode('utf-8', 'replace') 
+			msg = Message(jsonString)
+			msg.message_id = uuid.uuid4()
+			msg.correlation_id = "correlation-1234"
+			#msg.custom_properties["tornado-warning"] = "yes"
+			devceclient.send_message(msg)
 			os.remove('./sendcache/' + filename1)
-	
-#count = 0
-#while (count < 1000):
-	#count+=1
-	#Open the file with internal temp sensor
-	#utc_datetime = datetime.datetime.utcnow()
-	#message = utc_datetime.strftime("%Y-%m-%d %H:%M:%S")  + "," + myserial  + "," + str(getCpuTemperature()) 
-	#print message
-	#d2cMsgSender = D2CMsgSender(connectionString)
-	#print d2cMsgSender.sendD2CMsg(deviceId, str(getCpuTemperature()))
-	#time.sleep(1)
+	except:
+		 print("An exception occurred on processing to sendcache! (" + filename1 +")")
+
+#-------------------------------------
+# Main Programm  
+#-------------------------------------
+
+# Read the config
+
+config = configparser.ConfigParser()
+try:
+	config.read('TempLogger.config')
+except:
+  print("An exception occurred on reading configuration!")
+  sys.exit()
+
+
+myserial = getserial()
+deviceId = 'raspi' + myserial
+
+
+IoTHubDeviceConnectionString = 'HostName=' + config['AzIoTHub']['HostName'] + ';DeviceId=' + deviceId + ';SharedAccessKey=' + config['AzIoTHubDevice']['SharedAccessKey']
+
+print (deviceId)
+#ASA - DataeTime  - String values conforming to any of ISO 8601 formats are also supported.
+#timestamp = time.strftime("%Y-%m-%d-%H-%M-%S")
+#utc_datetime = datetime.datetime.utcnow().isoformat()
+timestamp = datetime.datetime.utcnow().isoformat()
+#.strftime("%Y-%m-%d %H:%M:%S") 
+#filename = "".join(["temperaturedata", timestamp, ".log"])
+
+obj = getISSPosition() 
+
+jsonString = JSONEncoder().encode({
+	"DeviceID": deviceId, 
+	"TimestampUTC": timestamp,
+	"longitude": obj['iss_position']['longitude'],
+	"latitude": obj['iss_position']['latitude'],
+	"CpuTemperature": str(getCpuTemperature()),
+	"S1Temperature": str(getSensorTemp('28-041643c28fff')),
+	"S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
+	"S3Temperature": str(getSensorTemp('28-0316440316ff')),
+	"S4Temperature": str(getSensorTemp('28-031644338cff')),
+	"S5Temperature": str(getSensorTemp('28-0316443b9eff')),
+	"OperatingMinutes": str(getUptime())
+})
+
+
+# The client object is used to interact with your Azure IoT hub.
+print(IoTHubDeviceConnectionString)
+device_client = IoTHubDeviceClient.create_from_connection_string(IoTHubDeviceConnectionString)
+
+try:
+	# Connect the client.
+	device_client.connect()
+	msg = Message(jsonString)
+	msg.message_id = uuid.uuid4()
+	msg.correlation_id = "correlation-1234"
+	#msg.custom_properties["tornado-warning"] = "yes"
+	device_client.send_message(msg)
+except:
+	print("An exception occurred on processing to sendcache! (" + filename1 +")")
+	writetosendcache(jsonString)
+finally:
+	# finally, disconnect
+	device_client.disconnect()
+
+
+
+
+
 
