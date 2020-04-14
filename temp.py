@@ -133,70 +133,68 @@ def processsendcache(devceclient):
 # Main Programm  
 #-------------------------------------
 def main():
-	while (1==1): 
+	#while (1==1): 
 		# Read the config
 
-		config = configparser.ConfigParser()
+	config = configparser.ConfigParser()
+	try:
+		config.read('TempLogger.config')
+	except:
+		print("An exception occurred on reading configuration!")
+		sys.exit()
+
+
+	myserial = getserial()
+	deviceId = 'raspi' + myserial
+
+
+	IoTHubDeviceConnectionString = 'HostName=' + config['AzIoTHub']['HostName'] + ';DeviceId=' + deviceId + ';SharedAccessKey=' + config['AzIoTHubDevice']['SharedAccessKey']
+
+	print (deviceId)
+
+	timestamp = datetime.datetime.utcnow().isoformat()
+
+
+	obj = getISSPosition() 
+
+	jsonString = JSONEncoder().encode({
+		"DeviceID": deviceId, 
+		"TimestampUTC": timestamp,
+		"longitude": obj['iss_position']['longitude'],
+		"latitude": obj['iss_position']['latitude'],
+		"cpuTemperature": str(getCpuTemperature()),
+		"S1Temperature": str(getSensorTemp('28-041643c28fff')),
+		"S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
+		"S3Temperature": str(getSensorTemp('28-0316440316ff')),
+		"S4Temperature": str(getSensorTemp('28-031644338cff')),
+		"S5Temperature": str(getSensorTemp('28-0316443b9eff')),
+		"OperatingMinutes": str(getUptime())
+	})
+
+
+	# The client object is used to interact with your Azure IoT hub.
+	print(IoTHubDeviceConnectionString)
+	device_client = IoTHubDeviceClient.create_from_connection_string(IoTHubDeviceConnectionString)
+
+	try:
+		# Connect the client.
+		device_client.connect()
+		msg = Message(jsonString)
+		msg.message_id = uuid.uuid4()
+		msg.correlation_id = "correlation-1234"
+		#msg.custom_properties["tornado-warning"] = "yes"
+		device_client.send_message(msg)
+	except Exception as inst:
+		print("An exception occurred on sending message. (" + inst + ")")
+		writetosendcache(jsonString)
+	finally:
+		# finally, disconnect
 		try:
-			config.read('TempLogger.config')
-		except:
-			print("An exception occurred on reading configuration!")
-			sys.exit()
-
-
-		myserial = getserial()
-		deviceId = 'raspi' + myserial
-
-
-		IoTHubDeviceConnectionString = 'HostName=' + config['AzIoTHub']['HostName'] + ';DeviceId=' + deviceId + ';SharedAccessKey=' + config['AzIoTHubDevice']['SharedAccessKey']
-
-		print (deviceId)
-
-		timestamp = datetime.datetime.utcnow().isoformat()
-
-
-		obj = getISSPosition() 
-
-		jsonString = JSONEncoder().encode({
-			"DeviceID": deviceId, 
-			"TimestampUTC": timestamp,
-			"longitude": obj['iss_position']['longitude'],
-			"latitude": obj['iss_position']['latitude'],
-			"cpuTemperature": str(getCpuTemperature()),
-			"S1Temperature": str(getSensorTemp('28-041643c28fff')),
-			"S2Temperature": str(getSensorTemp('28-031643ddf8ff')),
-			"S3Temperature": str(getSensorTemp('28-0316440316ff')),
-			"S4Temperature": str(getSensorTemp('28-031644338cff')),
-			"S5Temperature": str(getSensorTemp('28-0316443b9eff')),
-			"OperatingMinutes": str(getUptime())
-		})
-
-
-		# The client object is used to interact with your Azure IoT hub.
-		print(IoTHubDeviceConnectionString)
-		device_client = IoTHubDeviceClient.create_from_connection_string(IoTHubDeviceConnectionString)
-
-		try:
-			# Connect the client.
-			device_client.connect()
-			msg = Message(jsonString)
-			msg.message_id = uuid.uuid4()
-			msg.correlation_id = "correlation-1234"
-			#msg.custom_properties["tornado-warning"] = "yes"
-			device_client.send_message(msg)
-		except Exception as inst:
-			print("An exception occurred on sending message. (" + inst + ")")
-			writetosendcache(jsonString)
-		finally:
-			# finally, disconnect
-			try:
-				device_client.disconnect()
-			except Exception as e:
-				print("An exception occurred disconnet device client. (" + e + ")")
-
-
-		time.sleep(5)
-
+			device_client.disconnect()
+		except Exception as e:
+			print("An exception occurred disconnet device client. (" + e + ")")
+		#time.sleep(5)
+	
 main()
 
 
